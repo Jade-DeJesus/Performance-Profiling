@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>E-Commerce Performance Profiler</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="../static/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+
+<body>
+    <div class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <div class="logo-icon">
+                <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <div class="header-text">
+                <h1>E-Commerce Performance Profiler</h1>
+                <p>Import datasets, execute benchmarks, and analyze performance metrics</p>
+            </div>
+        </header>
+
+        <!-- Main Content Wrapper -->
+        <main class="main-content">
+            <!-- Stepper -->
+            <div class="stepper-container">
+                <div class="step active" id="step1-indicator" onclick="goToStep(1)">
+                    <div class="step-circle">1</div>
+                    <span class="step-label">Import Dataset</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step" id="step2-indicator">
+                    <div class="step-circle">2</div>
+                    <span class="step-label">Run Benchmarks</span>
+                </div>
+                <div class="step-line"></div>
+                <div class="step" id="step3-indicator">
+                    <div class="step-circle">3</div>
+                    <span class="step-label">View Results</span>
+                </div>
+            </div>
+
+            <!-- Tab 1: Import Dataset -->
+            <section id="tab-import" class="tab-pane active">
+
+                <div class="card dataset-instructions-card info-card-blue">
+                    <div class="card-header">
+                        <i class="fa-solid fa-circle-info"></i>
+                        <h2>Dataset Instructions</h2>
+                    </div>
+                    <div class="card-body">
+                        <p>This system evaluates the performance of search algorithms using an e-commerce dataset.</p>
+                        <p>You can either:</p>
+                        <ul>
+                            <li>Upload your own dataset (CSV or JSON)</li>
+                            <li>Generate a sample dataset automatically</li>
+                        </ul>
+                        <p>Each dataset record should contain the following fields: <strong>SKU, Name, Category, Price,
+                                Stock</strong></p>
+                        <p>Recommended dataset sizes:</p>
+                        <ul>
+                            <li><strong>1,000 records</strong> (small test)</li>
+                            <li><strong>10,000 records</strong> (medium test)</li>
+                            <li><strong>100,000 records</strong> (large test)</li>
+                            <li><strong>1,000,000 records</strong> (stress test)</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-database"></i>
+                        <div>
+                            <h2>Import E-commerce Dataset</h2>
+                            <p class="subtitle">Upload your dataset file (JSON or CSV format) or generate sample data
+                            </p>
+                        </div>
+                    </div>
+                    <div class="upload-area">
+                        <i class="fa-solid fa-arrow-up-from-bracket upload-icon"></i>
+                        <h3>Click to upload or drag and drop</h3>
+                        <p>Supports JSON and CSV files</p>
+                        <input type="file" id="file-upload" class="hidden-input" accept=".json,.csv">
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-table-list"></i>
+                        <div>
+                            <h2>Generate Sample Data</h2>
+                            <p class="subtitle">Quickly generate synthetic e-commerce data for testing</p>
+                        </div>
+                    </div>
+                    <div class="generate-buttons-grid">
+                        <button class="gen-btn" onclick="generateData(1000)">
+                            <span class="gen-val">1K</span>
+                            <span class="gen-lbl">Records</span>
+                        </button>
+                        <button class="gen-btn" onclick="generateData(10000)">
+                            <span class="gen-val">10K</span>
+                            <span class="gen-lbl">Records</span>
+                        </button>
+                        <button class="gen-btn" onclick="generateData(100000)">
+                            <span class="gen-val">100K</span>
+                            <span class="gen-lbl">Records</span>
+                        </button>
+                        <button class="gen-btn" onclick="generateData(1000000)">
+                            <span class="gen-val">1M</span>
+                            <span class="gen-lbl">Records</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab 2: Run Benchmarks -->
+            <section id="tab-benchmark" class="tab-pane">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-bolt"></i>
+                        <div>
+                            <h2>Execute Performance Benchmark</h2>
+                            <p class="subtitle">Run comprehensive tests to measure search, insert, and delete operations
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="dataset-loaded-panel">
+                        <div class="loaded-info">
+                            <i class="fa-solid fa-database text-blue"></i>
+                            <div>
+                                <p class="label">Dataset Loaded</p>
+                                <h3 class="value text-blue" id="loaded-records">1,000,000</h3>
+                                <p class="sub-label">Total Records</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-dark" onclick="startBenchmark()">
+                            <i class="fa-solid fa-play"></i> Start Benchmark
+                        </button>
+                    </div>
+
+                    <div class="config-panel">
+                        <div class="config-row">
+                            <div class="config-group full-width">
+                                <label><i class="fa-solid fa-circle-info text-gray"></i> Implementation
+                                    Selection</label>
+                                <span class="input-label">Implementation</span>
+                                <select id="impl-select" class="form-select">
+                                    <option value="hashing">Hashing-based Indexing (Traditional Hashing)</option>
+                                    <option value="hybrid">Distribution-Aware Hybrid Indexing (Interpolation-Binary
+                                        Search)</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="config-row three-cols">
+                            <div class="config-group">
+                                <label><i class="fa-solid fa-magnifying-glass"></i> SKU Search</label>
+                                <span class="input-label">Number of Search Operations</span>
+                                <input type="number" id="search-ops" class="form-input" value="1000">
+                                <span class="input-help" id="max-search-help">Max: 1,000,000</span>
+                            </div>
+                            <div class="config-group">
+                                <label><i class="fa-solid fa-plus"></i> Insert Operations</label>
+                                <span class="input-label">Number of Insert Operations</span>
+                                <input type="number" id="insert-ops" class="form-input" value="100">
+                                <span class="input-help" id="max-insert-help">Max: 1,000,000</span>
+                            </div>
+                            <div class="config-group">
+                                <label><i class="fa-regular fa-trash-can"></i> Delete Operations</label>
+                                <span class="input-label">Number of Delete Operations</span>
+                                <input type="number" id="delete-ops" class="form-input" value="100">
+                                <span class="input-help" id="max-delete-help">Max: 1,000,000</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="info-alert info-card-yellow">
+                        <h4><i class="fa-solid fa-circle-exclamation"></i> Benchmark Information</h4>
+                        <ul>
+                            <li><strong>Search Test:</strong> Performs random SKU lookups to measure search performance
+                            </li>
+                            <li><strong>Insert Test:</strong> Simulates adding new records (max 100) to the dataset</li>
+                            <li><strong>Delete Test:</strong> Simulates removing records (max 100) from the dataset</li>
+                            <li>All operations are performed in-memory to ensure accurate timing measurements</li>
+                            <li><strong>Implementation:</strong> <span id="current-impl-text">Hashing-based Indexing
+                                    (Traditional Hashing)</span></li>
+                        </ul>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Tab 3: View Results -->
+            <section id="tab-results" class="tab-pane">
+                <button class="btn btn-outline" onclick="goToStep(2)">
+                    <i class="fa-solid fa-arrow-left"></i> Run Another Benchmark
+                </button>
+
+                <div class="results-kpi-grid">
+                    <div class="kpi-card">
+                        <span class="kpi-label">Total Execution Time</span>
+                        <div class="kpi-value"><span id="kpi-total-time">461,200,000.048</span> <span
+                                class="unit">ns</span></div>
+                    </div>
+                    <div class="kpi-card">
+                        <span class="kpi-label">Average Time</span>
+                        <div class="kpi-value"><span id="kpi-avg-time">533,333.361</span> <span class="unit">ns</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card success">
+                        <span class="kpi-label"><i class="fa-regular fa-circle-check"></i> Fastest Operation</span>
+                        <div class="kpi-value"><span class="badge badge-success">INSERT</span> <span
+                                id="kpi-fastest-time">100,000.024ns</span></div>
+                    </div>
+                </div>
+
+                <div class="impl-banner">
+                    <strong>Implementation Used:</strong> <span id="result-impl-used">Hashing-based Indexing
+                        (Traditional Hashing)</span>
+                </div>
+
+                <!-- Analysis of Benchmark Section added based on prompt request -->
+                <div class="card result-analysis-card">
+                    <div class="card-header">
+                        <i class="fa-solid fa-chart-pie"></i>
+                        <div>
+                            <h2>Benchmark Result Analysis</h2>
+                            <p class="subtitle">AI-driven insights into the current run</p>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <p id="analysis-text">The selected algorithm demonstrated excellent search times with an average
+                            of 1,200ns per operation, significantly outperforming linear search baselines. Memory
+                            consumption remained stable at 0.5MB, indicating efficient index utilization.</p>
+                    </div>
+                </div>
+
+                <div class="charts-row">
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fa-solid fa-chart-simple"></i> Execution Time Comparison</h3>
+                            <p>Time taken for each operation in nanoseconds</p>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="timeChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="chart-card">
+                        <div class="chart-header">
+                            <h3><i class="fa-solid fa-chart-line"></i> Memory Usage Analysis</h3>
+                            <p>Memory consumption during operations in MB</p>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="memoryChart1"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card full-width mt-4">
+                    <div class="chart-header">
+                        <h3>Detailed Performance Metrics</h3>
+                        <p>Comprehensive breakdown of all benchmark results</p>
+                    </div>
+                    <div class="chart-body large-chart">
+                        <canvas id="detailedChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="export-card">
+                    <div class="chart-header">
+                        <h3><i class="fa-solid fa-download"></i> Export Results</h3>
+                        <p>Download performance data for further analysis</p>
+                    </div>
+                    <div class="export-buttons">
+                        <button class="btn btn-dark"><i class="fa-solid fa-download"></i> Download JSON Report</button>
+                        <button class="btn btn-outline"><i class="fa-solid fa-download"></i> Download CSV
+                            Report</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script src="../static/js/script.js"></script>
+</body>
+
+</html>
