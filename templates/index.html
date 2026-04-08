@@ -124,7 +124,7 @@
                         <i class="fa-solid fa-bolt"></i>
                         <div>
                             <h2>Execute Performance Benchmark</h2>
-                            <p class="subtitle">Run comprehensive tests to measure search, insert, and delete operations
+                            <p class="subtitle">Run comprehensive tests to measure search operations
                             </p>
                         </div>
                     </div>
@@ -138,42 +138,35 @@
                                 <p class="sub-label">Total Records</p>
                             </div>
                         </div>
-                        <button class="btn btn-dark" onclick="startBenchmark()">
-                            <i class="fa-solid fa-play"></i> Start Benchmark
-                        </button>
+                        <div class="loaded-actions">
+                            <button class="btn btn-outline" id="view-dataset-btn" onclick="viewDataset()" style="margin-right: 10px;">
+                                <i class="fa-solid fa-eye"></i> View Dataset
+                            </button>
+                            <button class="btn btn-dark" onclick="startBenchmark()">
+                                <i class="fa-solid fa-play"></i> Start Benchmark
+                            </button>
+                        </div>
                     </div>
 
                     <div class="config-panel">
                         <div class="config-row">
                             <div class="config-group full-width">
-                                <label><i class="fa-solid fa-circle-info text-gray"></i> Implementation
+                                <label><i class="fa-solid fa-circle-info text-gray"></i> Algorithm
                                     Selection</label>
-                                <span class="input-label">Implementation</span>
+                                <span class="input-label">Algorithm</span>
                                 <select id="impl-select" class="form-select">
-                                    <option value="hashing">Hashing-based Indexing (Traditional Hashing)</option>
-                                    <option value="hybrid">Distribution-Aware Hybrid Indexing (Interpolation-Binary
-                                        Search)</option>
+                                    <option value="interp-binary">Interpolation-Binary Search</option>
+                                    <option value="interp-fibonacci">Interpolation-Fibonacci Search</option>
+                                    <option value="interp-exponential">Interpolation-Exponential Search</option>
                                 </select>
                             </div>
                         </div>
-                        <div class="config-row three-cols">
-                            <div class="config-group">
+                        <div class="config-row">
+                            <div class="config-group full-width">
                                 <label><i class="fa-solid fa-magnifying-glass"></i> SKU Search</label>
                                 <span class="input-label">Number of Search Operations</span>
                                 <input type="number" id="search-ops" class="form-input" value="1000">
                                 <span class="input-help" id="max-search-help">Max: 1,000,000</span>
-                            </div>
-                            <div class="config-group">
-                                <label><i class="fa-solid fa-plus"></i> Insert Operations</label>
-                                <span class="input-label">Number of Insert Operations</span>
-                                <input type="number" id="insert-ops" class="form-input" value="100">
-                                <span class="input-help" id="max-insert-help">Max: 1,000,000</span>
-                            </div>
-                            <div class="config-group">
-                                <label><i class="fa-regular fa-trash-can"></i> Delete Operations</label>
-                                <span class="input-label">Number of Delete Operations</span>
-                                <input type="number" id="delete-ops" class="form-input" value="100">
-                                <span class="input-help" id="max-delete-help">Max: 1,000,000</span>
                             </div>
                         </div>
                     </div>
@@ -183,11 +176,8 @@
                         <ul>
                             <li><strong>Search Test:</strong> Performs random SKU lookups to measure search performance
                             </li>
-                            <li><strong>Insert Test:</strong> Simulates adding new records (max 100) to the dataset</li>
-                            <li><strong>Delete Test:</strong> Simulates removing records (max 100) from the dataset</li>
                             <li>All operations are performed in-memory to ensure accurate timing measurements</li>
-                            <li><strong>Implementation:</strong> <span id="current-impl-text">Hashing-based Indexing
-                                    (Traditional Hashing)</span></li>
+                            <li><strong>Algorithm:</strong> <span id="current-impl-text">Interpolation-Binary Search</span></li>
                         </ul>
                     </div>
                 </div>
@@ -211,15 +201,14 @@
                         </div>
                     </div>
                     <div class="kpi-card success">
-                        <span class="kpi-label"><i class="fa-regular fa-circle-check"></i> Fastest Operation</span>
-                        <div class="kpi-value"><span class="badge badge-success">INSERT</span> <span
+                        <span class="kpi-label"><i class="fa-regular fa-circle-check"></i> Fastest Search</span>
+                        <div class="kpi-value"><span class="badge badge-success">SEARCH</span> <span
                                 id="kpi-fastest-time">100,000.024ns</span></div>
                     </div>
                 </div>
 
                 <div class="impl-banner">
-                    <strong>Implementation Used:</strong> <span id="result-impl-used">Hashing-based Indexing
-                        (Traditional Hashing)</span>
+                    <strong>Algorithm Used:</strong> <span id="result-impl-used">Interpolation-Binary Search</span>
                 </div>
 
                 <!-- Analysis of Benchmark Section added based on prompt request -->
@@ -241,8 +230,8 @@
                 <div class="charts-row">
                     <div class="chart-card">
                         <div class="chart-header">
-                            <h3><i class="fa-solid fa-chart-simple"></i> Execution Time Comparison</h3>
-                            <p>Time taken for each operation in nanoseconds</p>
+                            <h3><i class="fa-solid fa-chart-line"></i> Execution Time Progression</h3>
+                            <p>Time taken across search operation batches (ns)</p>
                         </div>
                         <div class="chart-body">
                             <canvas id="timeChart"></canvas>
@@ -251,7 +240,7 @@
                     <div class="chart-card">
                         <div class="chart-header">
                             <h3><i class="fa-solid fa-chart-line"></i> Memory Usage Analysis</h3>
-                            <p>Memory consumption during operations in MB</p>
+                            <p>Memory consumption across search operation batches (MB)</p>
                         </div>
                         <div class="chart-body">
                             <canvas id="memoryChart1"></canvas>
@@ -282,6 +271,40 @@
                 </div>
             </section>
         </main>
+    </div>
+
+    <!-- Dataset Preview Modal -->
+    <div id="dataset-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal" onclick="closeDatasetModal()">&times;</span>
+            <h2>Dataset Preview <span id="preview-count" style="font-size: 1rem; color: #666; font-weight: normal; margin-left: 10px;"></span></h2>
+            <div class="table-responsive" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
+                <table id="dataset-table" class="data-table">
+                    <thead>
+                        <tr id="dataset-table-head">
+                            <!-- Headers will be injected here -->
+                        </tr>
+                    </thead>
+                    <tbody id="dataset-table-body">
+                        <!-- Rows will be injected here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <div id="dataset-pagination" style="display: none; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                <button class="btn btn-outline" id="btn-prev-page" onclick="changeDatasetPage(-1)">
+                    <i class="fa-solid fa-chevron-left"></i> Previous
+                </button>
+                <span id="page-indicator" style="font-size: 0.875rem; color: #666;">Page 1 of ?</span>
+                <button class="btn btn-outline" id="btn-next-page" onclick="changeDatasetPage(1)">
+                    Next <i class="fa-solid fa-chevron-right"></i>
+                </button>
+            </div>
+
+            <div id="dataset-modal-empty" style="display: none; padding: 20px; text-align: center; color: #666;">
+                No preview data available.
+            </div>
+        </div>
     </div>
 
     <script src="../static/js/script.js"></script>
