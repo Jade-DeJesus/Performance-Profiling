@@ -5,6 +5,7 @@ let currentImpl = 'interp-binary';
 let datasetPreview = null; // Store a preview of the dataset
 let lastTimeData = [];
 let lastMemData = [];
+let benchmarkHistory = []; // Track all benchmarking runs
 let datasetHeaders = []; // Store the headers for the dataset tabular view
 let currentPreviewPage = 1; // Track the current page in the dataset modal
 const previewRowsPerPage = 100; // Only display 100 rows per page to prevent browser freeze
@@ -294,7 +295,52 @@ function executeBenchmarkCore() {
     }
     document.getElementById('analysis-text').innerText = analysisText;
 
+    // Save to history
+    benchmarkHistory.push({
+        run: benchmarkHistory.length + 1,
+        algorithm: currentImpl,
+        algorithmName: document.getElementById('result-impl-used').innerText,
+        searchOps: searchOps,
+        totalTimeNs: totalTimeNs,
+        avgTimeNs: avgTimeNs,
+        fastestTimeNs: minBatchNs,
+        timeDataMs: timeDataMs,
+        timeDataNs: [...timeDataNs],
+        memDataMB: [...lastMemData],
+        batchLabels: ['Batch 1', 'Batch 2', 'Batch 3', 'Batch 4', 'Batch 5', 'Batch 6']
+    });
+
+    updateHistoryTable();
+
     goToStep(3);
+}
+
+function updateHistoryTable() {
+    const tbody = document.getElementById('history-table-body');
+    if (!tbody) return;
+    
+    tbody.innerHTML = '';
+    
+    // Sort array by run number descending so newest is on top
+    const sortedHistory = [...benchmarkHistory].reverse();
+    
+    sortedHistory.forEach(runData => {
+        const tr = document.createElement('tr');
+        
+        // Formatter for large numbers
+        const nForm = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 });
+        const dForm = new Intl.NumberFormat(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+        
+        tr.innerHTML = `
+            <td>#${runData.run}</td>
+            <td>${runData.algorithmName}</td>
+            <td>${nForm.format(runData.searchOps)}</td>
+            <td>${dForm.format(runData.totalTimeNs)}</td>
+            <td>${dForm.format(runData.avgTimeNs)}</td>
+        `;
+        
+        tbody.appendChild(tr);
+    });
 }
 
 // Search Implementations
@@ -381,38 +427,85 @@ function renderCharts() {
     if (memoryChart) memoryChart.destroy();
     if (detailedChart) detailedChart.destroy();
 
-    // Shared Colors
-    const blueColor = '#3b82f6';
-    const greenColor = '#10b981';
-
-    // Mock Data modifers based on algorithm
-    const isInterpBinary = currentImpl === 'interp-binary';
-    const isInterpFib = currentImpl === 'interp-fibonacci';
-
-    const timeData = lastTimeData.length > 0 ? lastTimeData : [800000, 810000, 790000, 805000, 795000, 800000];
-    const memData = lastMemData.length > 0 ? lastMemData : [0.2, 0.21, 0.2, 0.19, 0.22, 0.2];
     const batchLabels = ['Batch 1', 'Batch 2', 'Batch 3', 'Batch 4', 'Batch 5', 'Batch 6'];
+    const colors = [
+        '#3b82f6', // blue
+        '#10b981', // green
+        '#f59e0b', // yellow
+        '#ef4444', // red
+        '#8b5cf6', // purple
+        '#ec4899', // pink
+        '#06b6d4', // cyan
+    ];
+
+    // If no history, just show mock empty graph using current lastTimeData or defaults
+    const historyToUse = benchmarkHistory.length > 0 ? benchmarkHistory : [{
+        run: 1,
+        algorithmName: 'No Data Yet',
+        timeDataNs: lastTimeData.length > 0 ? lastTimeData : [800000, 810000, 790000, 805000, 795000, 800000],
+        memDataMB: lastMemData.length > 0 ? lastMemData : [0.2, 0.21, 0.2, 0.19, 0.22, 0.2]
+    }];
+
+    // 1. Time Chart Datasets
+    const timeDatasets = historyToUse.map((run, idx) => ({
+        label: `Run ${run.run}: ${run.algorithmName}`,
+        data: run.timeDataNs,
+        borderColor: colors[idx % colors.length],
+        backgroundColor: colors[idx % colors.length] + '20', // transparent fill
+        borderWidth: 2,
+        fill: historyToUse.length === 1, // Only fill if there's 1 dataset to avoid mess
+        tension: 0.3
+    }));
+
+    // 2. Memory Chart Datasets
+    const memDatasets = historyToUse.map((run, idx) => ({
+        label: `Run ${run.run}: ${run.algorithmName}`,
+        data: run.memDataMB,
+        borderColor: colors[(idx + 1) % colors.length], // shift color
+        backgroundColor: colors[(idx + 1) % colors.length] + '20',
+        borderWidth: 2,
+        fill: historyToUse.length === 1,
+        tension: 0.3
+    }));
+
+    // 3. Detailed Chart Datasets
+    const detailedDatasets = [];
+    historyToUse.forEach((run, idx) => {
+        detailedDatasets.push({
+            label: `R${run.run} Time (ns)`,
+            data: run.timeDataNs,
+            borderColor: colors[idx % colors.length],
+            backgroundColor: colors[idx % colors.length],
+            yAxisID: 'y',
+            tension: 0.3,
+            pointStyle: 'circle',
+            pointRadius: 4
+        });
+        detailedDatasets.push({
+            label: `R${run.run} Mem (MB)`,
+            data: run.memDataMB,
+            borderColor: colors[idx % colors.length] + '80', // slightly faded for memory
+            borderDash: [5, 5],
+            yAxisID: 'y1',
+            tension: 0.3,
+            pointStyle: 'rect',
+            pointRadius: 4
+        });
+    });
 
     // 1. Time Chart (Line)
     timeChart = new Chart(timeCtx, {
         type: 'line',
         data: {
             labels: batchLabels,
-            datasets: [{
-                label: 'Execution Time (ns)',
-                data: timeData,
-                backgroundColor: 'rgba(59, 130, 246, 0.1)',
-                borderColor: blueColor,
-                fill: true,
-                tension: 0.3
-            }]
+            datasets: timeDatasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: { legend: { display: historyToUse.length > 1 } },
             scales: {
-                y: { beginAtZero: false, grid: { borderDash: [5, 5] } },
+                y: { beginAtZero: false, grid: { borderDash: [5, 5] }, title: {display: true, text: 'Execution Time (ns)'} },
                 x: { grid: { display: false } }
             }
         }
@@ -423,22 +516,14 @@ function renderCharts() {
         type: 'line',
         data: {
             labels: batchLabels,
-            datasets: [{
-                label: 'Memory Usage (MB)',
-                data: memData,
-                borderColor: greenColor,
-                backgroundColor: 'rgba(16, 185, 129, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.3
-            }]
+            datasets: memDatasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: { legend: { display: historyToUse.length > 1 } },
             scales: {
-                y: { beginAtZero: false, grid: { borderDash: [5, 5] } },
+                y: { beginAtZero: false, grid: { borderDash: [5, 5] }, title: {display: true, text: 'Memory Usage (MB)'} },
                 x: { grid: { display: false } }
             }
         }
@@ -450,34 +535,13 @@ function renderCharts() {
         type: 'line',
         data: {
             labels: batchLabels,
-            datasets: [
-                {
-                    label: 'Execution Time (ns)',
-                    data: timeData,
-                    borderColor: blueColor,
-                    backgroundColor: blueColor,
-                    yAxisID: 'y',
-                    tension: 0.3,
-                    pointStyle: 'circle',
-                    pointRadius: 4
-                },
-                {
-                    label: 'Memory Usage (MB)',
-                    data: memData,
-                    borderColor: greenColor,
-                    backgroundColor: greenColor,
-                    yAxisID: 'y1',
-                    tension: 0.3,
-                    borderDash: [5, 5],
-                    pointStyle: 'rect',
-                    pointRadius: 4
-                }
-            ]
+            datasets: detailedDatasets
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
             interaction: { mode: 'index', intersect: false },
+            plugins: { legend: { display: true } }, 
             scales: {
                 y: {
                     type: 'linear',
@@ -584,4 +648,66 @@ function changeDatasetPage(direction) {
 
 function closeDatasetModal() {
     document.getElementById('dataset-modal').style.display = 'none';
+}
+
+// Export Functions
+function downloadJSON() {
+    if (benchmarkHistory.length === 0) {
+        alert("No benchmark data available to export.");
+        return;
+    }
+    
+    // Create export payload
+    const exportData = {
+        exportedAt: new Date().toISOString(),
+        datasetSize: datasetSize,
+        totalRuns: benchmarkHistory.length,
+        runs: benchmarkHistory
+    };
+    
+    // Create downloaded JSON file
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", dataStr);
+    downloadAnchorNode.setAttribute("download", "benchmark_report.json");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
+}
+
+function downloadCSV() {
+    if (benchmarkHistory.length === 0) {
+        alert("No benchmark data available to export.");
+        return;
+    }
+    
+    let csvContent = "data:text/csv;charset=utf-8,";
+    // Header
+    const headers = [
+        "Run Number", "Algorithm", "Total Operations", "Total Time (ns)", "Avg Time (ns)", "Fastest Time (ns)",
+        "Batch 1 Time (ns)", "Batch 2 Time (ns)", "Batch 3 Time (ns)", "Batch 4 Time (ns)", "Batch 5 Time (ns)", "Batch 6 Time (ns)",
+        "Batch 1 Mem (MB)", "Batch 2 Mem (MB)", "Batch 3 Mem (MB)", "Batch 4 Mem (MB)", "Batch 5 Mem (MB)", "Batch 6 Mem (MB)"
+    ];
+    csvContent += headers.map(h => `"${h}"`).join(",") + "\r\n";
+    
+    benchmarkHistory.forEach(run => {
+        const row = [
+            run.run,
+            `"${run.algorithmName}"`,
+            run.searchOps,
+            run.totalTimeNs,
+            run.avgTimeNs,
+            run.fastestTimeNs,
+            ...(run.timeDataNs.map(v => v || 0)),
+            ...(run.memDataMB.map(v => v || 0))
+        ];
+        csvContent += row.join(",") + "\r\n";
+    });
+    
+    const downloadAnchorNode = document.createElement('a');
+    downloadAnchorNode.setAttribute("href", encodeURI(csvContent));
+    downloadAnchorNode.setAttribute("download", "benchmark_report.csv");
+    document.body.appendChild(downloadAnchorNode);
+    downloadAnchorNode.click();
+    downloadAnchorNode.remove();
 }

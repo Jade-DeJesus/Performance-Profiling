@@ -217,13 +217,29 @@
                         <i class="fa-solid fa-chart-pie"></i>
                         <div>
                             <h2>Benchmark Result Analysis</h2>
-                            <p class="subtitle">AI-driven insights into the current run</p>
+                            <p class="subtitle">AI-driven insights into the current and previous runs</p>
                         </div>
                     </div>
                     <div class="card-body">
                         <p id="analysis-text">The selected algorithm demonstrated excellent search times with an average
                             of 1,200ns per operation, significantly outperforming linear search baselines. Memory
                             consumption remained stable at 0.5MB, indicating efficient index utilization.</p>
+                        <!-- Added history table -->
+                        <div class="table-responsive mt-4" style="max-height: 250px; overflow-y: auto;">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Run #</th>
+                                        <th>Algorithm</th>
+                                        <th>Ops</th>
+                                        <th>Total Time (ns)</th>
+                                        <th>Avg Time (ns)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="history-table-body">
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
 
@@ -264,8 +280,8 @@
                         <p>Download performance data for further analysis</p>
                     </div>
                     <div class="export-buttons">
-                        <button class="btn btn-dark"><i class="fa-solid fa-download"></i> Download JSON Report</button>
-                        <button class="btn btn-outline"><i class="fa-solid fa-download"></i> Download CSV
+                        <button class="btn btn-dark" onclick="downloadJSON()"><i class="fa-solid fa-download"></i> Download JSON Report</button>
+                        <button class="btn btn-outline" onclick="downloadCSV()"><i class="fa-solid fa-download"></i> Download CSV
                             Report</button>
                     </div>
                 </div>
