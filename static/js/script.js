@@ -285,16 +285,6 @@ function executeBenchmarkCore() {
     lastMemData = Array.from({length: numBatches}, () => baseMem + (Math.random() * 0.02 - 0.01));
     lastTimeData = timeDataNs;
 
-    let analysisText = "";
-    if (currentImpl === 'interp-binary') {
-        analysisText = "Interpolation-Binary Search executed properly against strictly numeric keys within the dataset. As captured in the line graphs below, execution time across operation batches measures a highly optimized process (varying consistently around " + Math.round(avgTimeNs) + "ns/op) due to accurate initial positional estimations and fallback binary search, with the expected stable " + baseMem + "MB overhead.";
-    } else if (currentImpl === 'interp-fibonacci') {
-        analysisText = "Interpolation-Fibonacci Search correctly applied sequence iterations to filter search queries over the dataset keys. The derived performance over " + searchOps + " randomized operations plotted an extremely stable line matching CPU speeds of around " + Math.round(avgTimeNs) + "ns/op. Memory cache footprint was highly optimal at roughly " + baseMem + "MB.";
-    } else {
-        analysisText = "Interpolation-Exponential Search precisely scaled and verified exponential bounds around the dataset values. Profiling indicated scalable efficiency holding times to roughly " + Math.round(avgTimeNs) + "ns/op, perfectly demonstrating why boundaries defined in minimal exponent frames prevent runaway looping bounds along vast distributed records.";
-    }
-    document.getElementById('analysis-text').innerText = analysisText;
-
     // Save to history
     benchmarkHistory.push({
         run: benchmarkHistory.length + 1,
@@ -310,9 +300,57 @@ function executeBenchmarkCore() {
         batchLabels: ['Batch 1', 'Batch 2', 'Batch 3', 'Batch 4', 'Batch 5', 'Batch 6']
     });
 
+    document.getElementById('analysis-text').innerText = generateAnalysisText();
+
     updateHistoryTable();
 
     goToStep(3);
+}
+
+function generateAnalysisText() {
+    if (benchmarkHistory.length === 0) return "No benchmark data available.";
+    
+    if (benchmarkHistory.length === 1) {
+        const run = benchmarkHistory[0];
+        let baseMsg = `The selected ${run.algorithmName} demonstrated excellent search times with an average of ${Math.round(run.avgTimeNs)}ns per operation. `;
+        if (run.algorithm === 'interp-binary') {
+            return baseMsg + `Execution time is highly optimized due to accurate initial positional estimations and fallback binary search, with an average ${run.memDataMB[0].toFixed(2)}MB overhead.`;
+        } else if (run.algorithm === 'interp-fibonacci') {
+            return baseMsg + `It effectively applies sequence iterations to filter search queries, maintaining an optimal memory footprint of roughly ${run.memDataMB[0].toFixed(2)}MB.`;
+        } else {
+            return baseMsg + `Profiling indicates scalable efficiency holding precise exponential bounds, keeping runaway looping in check with about ${run.memDataMB[0].toFixed(2)}MB memory usage.`;
+        }
+    }
+
+    // Compare multiple runs
+    let fastestRun = benchmarkHistory.reduce((prev, current) => (prev.avgTimeNs < current.avgTimeNs) ? prev : current);
+    let mostMemoryEfficientRun = benchmarkHistory.reduce((prev, current) => {
+        let prevAvgMem = prev.memDataMB.reduce((a, b) => a + b, 0) / prev.memDataMB.length;
+        let currAvgMem = current.memDataMB.reduce((a, b) => a + b, 0) / current.memDataMB.length;
+        return (prevAvgMem < currAvgMem) ? prev : current;
+    });
+
+    let algorithmsRun = [...new Set(benchmarkHistory.map(run => run.algorithmName))];
+    let algorithmsRunText = algorithmsRun.length === 1 ? algorithmsRun[0] : algorithmsRun.slice(0, -1).join(', ') + ' and ' + algorithmsRun[algorithmsRun.length - 1];
+    
+    let analysis = `A total of ${benchmarkHistory.length} benchmark runs have been executed, covering ${algorithmsRunText}. `;
+    
+    analysis += `Comparing the results, ${fastestRun.algorithmName} (Run #${fastestRun.run}) proved to be the fastest, averaging ${Math.round(fastestRun.avgTimeNs).toLocaleString()}ns per operation. `;
+    
+    if (benchmarkHistory.length > 1) {
+        let slowestRun = benchmarkHistory.reduce((prev, current) => (prev.avgTimeNs > current.avgTimeNs) ? prev : current);
+        if (fastestRun.run !== slowestRun.run) {
+            let speedup = (slowestRun.avgTimeNs / fastestRun.avgTimeNs).toFixed(2);
+            analysis += `It is approximately ${speedup}x faster than the slowest run (${slowestRun.algorithmName}, Run #${slowestRun.run}). `;
+        }
+    }
+
+    let minAvgMem = (mostMemoryEfficientRun.memDataMB.reduce((a, b) => a + b, 0) / mostMemoryEfficientRun.memDataMB.length).toFixed(2);
+    analysis += `In terms of memory, ${mostMemoryEfficientRun.algorithmName} (Run #${mostMemoryEfficientRun.run}) was the most efficient, maintaining roughly ${minAvgMem}MB footprint. `;
+
+    analysis += `Conclusion: ${fastestRun.algorithmName} is currently the most optimal choice for raw execution speed for this dataset, providing the best trade-off between look-up time and memory consumption.`;
+    
+    return analysis;
 }
 
 function updateHistoryTable() {
