@@ -139,7 +139,8 @@
                             </div>
                         </div>
                         <div class="loaded-actions">
-                            <button class="btn btn-outline" id="view-dataset-btn" onclick="viewDataset()" style="margin-right: 10px;">
+                            <button class="btn btn-outline" id="view-dataset-btn" onclick="viewDataset()"
+                                style="margin-right: 10px;">
                                 <i class="fa-solid fa-eye"></i> View Dataset
                             </button>
                             <button class="btn btn-dark" onclick="startBenchmark()">
@@ -149,18 +150,7 @@
                     </div>
 
                     <div class="config-panel">
-                        <div class="config-row">
-                            <div class="config-group full-width">
-                                <label><i class="fa-solid fa-circle-info text-gray"></i> Algorithm
-                                    Selection</label>
-                                <span class="input-label">Algorithm</span>
-                                <select id="impl-select" class="form-select">
-                                    <option value="interp-binary">Interpolation-Binary Search</option>
-                                    <option value="interp-fibonacci">Interpolation-Fibonacci Search</option>
-                                    <option value="interp-exponential">Interpolation-Exponential Search</option>
-                                </select>
-                            </div>
-                        </div>
+
                         <div class="config-row">
                             <div class="config-group full-width">
                                 <label><i class="fa-solid fa-magnifying-glass"></i> SKU Search</label>
@@ -177,7 +167,7 @@
                             <li><strong>Search Test:</strong> Performs random SKU lookups to measure search performance
                             </li>
                             <li>All operations are performed in-memory to ensure accurate timing measurements</li>
-                            <li><strong>Algorithm:</strong> <span id="current-impl-text">Interpolation-Binary Search</span></li>
+                            <li><strong>Algorithms Benchmarked:</strong> Automatically runs all three Interpolation variants (Binary, Fibonacci, Exponential).</li>
                         </ul>
                     </div>
                 </div>
@@ -202,13 +192,13 @@
                     </div>
                     <div class="kpi-card success">
                         <span class="kpi-label"><i class="fa-regular fa-circle-check"></i> Fastest Search</span>
-                        <div class="kpi-value"><span class="badge badge-success">SEARCH</span> <span
+                        <div class="kpi-value"><span class="badge badge-success" id="kpi-fastest-badge">SEARCH</span> <span
                                 id="kpi-fastest-time">100,000.024ns</span></div>
                     </div>
                 </div>
 
                 <div class="impl-banner">
-                    <strong>Algorithm Used:</strong> <span id="result-impl-used">Interpolation-Binary Search</span>
+                    <strong>Algorithms Benchmarked:</strong> <span id="result-impl-used">All Interpolation Variants</span>
                 </div>
 
                 <!-- Analysis of Benchmark Section added based on prompt request -->
@@ -280,8 +270,10 @@
                         <p>Download performance data for further analysis</p>
                     </div>
                     <div class="export-buttons">
-                        <button class="btn btn-dark" onclick="downloadJSON()"><i class="fa-solid fa-download"></i> Download JSON Report</button>
-                        <button class="btn btn-outline" onclick="downloadCSV()"><i class="fa-solid fa-download"></i> Download CSV
+                        <button class="btn btn-dark" onclick="downloadJSON()"><i class="fa-solid fa-download"></i>
+                            Download JSON Report</button>
+                        <button class="btn btn-outline" onclick="downloadCSV()"><i class="fa-solid fa-download"></i>
+                            Download CSV
                             Report</button>
                     </div>
                 </div>
@@ -293,7 +285,8 @@
     <div id="dataset-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="closeDatasetModal()">&times;</span>
-            <h2>Dataset Preview <span id="preview-count" style="font-size: 1rem; color: #666; font-weight: normal; margin-left: 10px;"></span></h2>
+            <h2>Dataset Preview <span id="preview-count"
+                    style="font-size: 1rem; color: #666; font-weight: normal; margin-left: 10px;"></span></h2>
             <div class="table-responsive" style="max-height: 400px; overflow-y: auto; margin-top: 15px;">
                 <table id="dataset-table" class="data-table">
                     <thead>
@@ -306,8 +299,9 @@
                     </tbody>
                 </table>
             </div>
-            
-            <div id="dataset-pagination" style="display: none; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+
+            <div id="dataset-pagination"
+                style="display: none; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
                 <button class="btn btn-outline" id="btn-prev-page" onclick="changeDatasetPage(-1)">
                     <i class="fa-solid fa-chevron-left"></i> Previous
                 </button>

@@ -1,7 +1,6 @@
 // Global State
 let currentStep = 1;
 let datasetSize = 0;
-let currentImpl = 'interp-binary';
 let datasetPreview = null; // Store a preview of the dataset
 let lastTimeData = [];
 let lastMemData = [];
@@ -46,13 +45,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // Implementation Select tracking
-    const implSelect = document.getElementById('impl-select');
-    implSelect.addEventListener('change', (e) => {
-        currentImpl = e.target.value;
-        const implText = e.target.options[e.target.selectedIndex].text;
-        document.getElementById('current-impl-text').innerText = implText;
-    });
 
     // Close modal when clicking outside of the content
     window.addEventListener('click', (e) => {
@@ -243,62 +235,94 @@ function executeBenchmarkCore() {
         batches.push(queries.slice(start, end));
     }
 
-    const implSelect = document.getElementById('impl-select');
-    document.getElementById('result-impl-used').innerText = implSelect.options[implSelect.selectedIndex].text;
+    const algorithms = [
+        { id: 'interp-binary', name: 'Interpolation-Binary Search' },
+        { id: 'interp-fibonacci', name: 'Interpolation-Fibonacci Search' },
+        { id: 'interp-exponential', name: 'Interpolation-Exponential Search' }
+    ];
 
-    let searchFunc;
-    if (currentImpl === 'interp-binary') searchFunc = interpBinarySearch;
-    else if (currentImpl === 'interp-fibonacci') searchFunc = interpFibonacciSearch;
-    else searchFunc = interpExponentialSearch;
+    document.getElementById('result-impl-used').innerText = "All Interpolation Variants";
 
-    // 4. Run benchmarking!
-    let timeDataMs = [];
-    let totalTimeMs = 0;
-    
-    for (let i = 0; i < batches.length; i++) {
-        let batchQueries = batches[i];
-        let t0 = performance.now();
+    // 4. Run benchmarking for all algorithms!
+    let kpiTotalNs = 0;
+    let kpiTotalOps = 0;
+    let kpiFastestNs = Infinity;
+    let kpiFastestName = "";
+
+    algorithms.forEach((alg) => {
+        let searchFunc;
+        if (alg.id === 'interp-binary') searchFunc = interpBinarySearch;
+        else if (alg.id === 'interp-fibonacci') searchFunc = interpFibonacciSearch;
+        else searchFunc = interpExponentialSearch;
+
+        let timeDataMs = [];
+        let totalTimeMs = 0;
         
-        for (let j = 0; j < batchQueries.length; j++) {
-            searchFunc(optimizedDataset, batchQueries[j]);
+        for (let i = 0; i < batches.length; i++) {
+            let batchQueries = batches[i];
+            let t0 = performance.now();
+            
+            for (let j = 0; j < batchQueries.length; j++) {
+                searchFunc(optimizedDataset, batchQueries[j]);
+            }
+            
+            let t1 = performance.now();
+            let diffMs = (t1 - t0);
+            timeDataMs.push(diffMs);
+            totalTimeMs += diffMs;
         }
         
-        let t1 = performance.now();
-        let diffMs = (t1 - t0);
-        timeDataMs.push(diffMs);
-        totalTimeMs += diffMs;
-    }
-    
-    // Contextual metric processing to scale properly (ns)
-    let timeDataNs = timeDataMs.map(ms => Math.max(ms * 1_000_000, 1500 + Math.random() * 500)); 
-    let totalTimeNs = timeDataNs.reduce((a,b) => a+b, 0);
-    let avgTimeNs = totalTimeNs / (searchOps || 1);
+        // Contextual metric processing to scale properly (ns)
+        let timeDataNs = timeDataMs.map(ms => Math.max(ms * 1_000_000, 1500 + Math.random() * 500)); 
+        let totalTimeNs = timeDataNs.reduce((a,b) => a+b, 0);
+        let avgTimeNs = totalTimeNs / (searchOps || 1);
+        
+        let minBatchNs = Math.min(...timeDataNs) / queriesPerBatch;
+        if(isNaN(minBatchNs) || !isFinite(minBatchNs)) minBatchNs = 0;
 
-    document.getElementById('kpi-total-time').innerText = totalTimeNs.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
-    document.getElementById('kpi-avg-time').innerText = avgTimeNs.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
-    
-    let minBatchNs = Math.min(...timeDataNs) / queriesPerBatch;
-    if(isNaN(minBatchNs) || !isFinite(minBatchNs)) minBatchNs = 0;
-    document.getElementById('kpi-fastest-time').innerText = minBatchNs.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3}) + "ns";
+        const baseMem = alg.id === 'interp-binary' ? 0.2 : (alg.id === 'interp-fibonacci' ? 0.25 : 0.15);
+        let memData = Array.from({length: numBatches}, () => baseMem + (Math.random() * 0.02 - 0.01));
+        
+        if (minBatchNs < kpiFastestNs) {
+            kpiFastestNs = minBatchNs;
+            kpiFastestName = alg.name;
+        }
 
-    const baseMem = currentImpl === 'interp-binary' ? 0.2 : (currentImpl === 'interp-fibonacci' ? 0.25 : 0.15);
-    lastMemData = Array.from({length: numBatches}, () => baseMem + (Math.random() * 0.02 - 0.01));
-    lastTimeData = timeDataNs;
+        kpiTotalNs += totalTimeNs;
+        kpiTotalOps += searchOps;
 
-    // Save to history
-    benchmarkHistory.push({
-        run: benchmarkHistory.length + 1,
-        algorithm: currentImpl,
-        algorithmName: document.getElementById('result-impl-used').innerText,
-        searchOps: searchOps,
-        totalTimeNs: totalTimeNs,
-        avgTimeNs: avgTimeNs,
-        fastestTimeNs: minBatchNs,
-        timeDataMs: timeDataMs,
-        timeDataNs: [...timeDataNs],
-        memDataMB: [...lastMemData],
-        batchLabels: ['Batch 1', 'Batch 2', 'Batch 3', 'Batch 4', 'Batch 5', 'Batch 6']
+        lastMemData = memData;
+        lastTimeData = timeDataNs;
+
+        // Save to history
+        benchmarkHistory.push({
+            run: benchmarkHistory.length + 1,
+            algorithm: alg.id,
+            algorithmName: alg.name,
+            searchOps: searchOps,
+            totalTimeNs: totalTimeNs,
+            avgTimeNs: avgTimeNs,
+            fastestTimeNs: minBatchNs,
+            timeDataMs: timeDataMs,
+            timeDataNs: [...timeDataNs],
+            memDataMB: [...memData],
+            batchLabels: ['Batch 1', 'Batch 2', 'Batch 3', 'Batch 4', 'Batch 5', 'Batch 6']
+        });
     });
+
+    let overallAvgNs = kpiTotalNs / (kpiTotalOps || 1);
+
+    document.getElementById('kpi-total-time').innerText = kpiTotalNs.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    document.getElementById('kpi-avg-time').innerText = overallAvgNs.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 });
+    
+    // Update badge with initials of the fastest algorithm
+    let algShortName = "FAST";
+    if (kpiFastestName.includes("Binary")) algShortName = "INT-BIN";
+    else if (kpiFastestName.includes("Fibonacci")) algShortName = "INT-FIB";
+    else if (kpiFastestName.includes("Exponential")) algShortName = "INT-EXP";
+
+    document.getElementById('kpi-fastest-badge').innerText = algShortName;
+    document.getElementById('kpi-fastest-time').innerText = kpiFastestNs.toLocaleString(undefined, {minimumFractionDigits: 3, maximumFractionDigits: 3}) + "ns";
 
     document.getElementById('analysis-text').innerText = generateAnalysisText();
 
