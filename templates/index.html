@@ -167,7 +167,8 @@
                             <li><strong>Search Test:</strong> Performs random SKU lookups to measure search performance
                             </li>
                             <li>All operations are performed in-memory to ensure accurate timing measurements</li>
-                            <li><strong>Algorithms Benchmarked:</strong> Automatically runs all three Interpolation variants (Binary, Fibonacci, Exponential).</li>
+                            <li><strong>Algorithms Benchmarked:</strong> Automatically runs all three Interpolation
+                                variants (Binary, Fibonacci, Exponential).</li>
                         </ul>
                     </div>
                 </div>
@@ -192,13 +193,14 @@
                     </div>
                     <div class="kpi-card success">
                         <span class="kpi-label"><i class="fa-regular fa-circle-check"></i> Fastest Search</span>
-                        <div class="kpi-value"><span class="badge badge-success" id="kpi-fastest-badge">SEARCH</span> <span
-                                id="kpi-fastest-time">100,000.024ns</span></div>
+                        <div class="kpi-value"><span class="badge badge-success" id="kpi-fastest-badge">SEARCH</span>
+                            <span id="kpi-fastest-time">100,000.024ns</span></div>
                     </div>
                 </div>
 
                 <div class="impl-banner">
-                    <strong>Algorithms Benchmarked:</strong> <span id="result-impl-used">All Interpolation Variants</span>
+                    <strong>Algorithms Benchmarked:</strong> <span id="result-impl-used">All Interpolation
+                        Variants</span>
                 </div>
 
                 <!-- Analysis of Benchmark Section added based on prompt request -->
@@ -211,9 +213,9 @@
                         </div>
                     </div>
                     <div class="card-body">
-                        <p id="analysis-text">The selected algorithm demonstrated excellent search times with an average
-                            of 1,200ns per operation, significantly outperforming linear search baselines. Memory
-                            consumption remained stable at 0.5MB, indicating efficient index utilization.</p>
+                        <div id="analysis-container">
+                            <p>Loading analysis...</p>
+                        </div>
                         <!-- Added history table -->
                         <div class="table-responsive mt-4" style="max-height: 250px; overflow-y: auto;">
                             <table class="data-table">
