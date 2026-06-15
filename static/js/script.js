@@ -325,6 +325,7 @@ function executeBenchmarkCore() {
     document.getElementById('kpi-fastest-time').innerText = kpiFastestNs.toLocaleString(undefined, { minimumFractionDigits: 3, maximumFractionDigits: 3 }) + "ns";
 
     document.getElementById('analysis-container').innerHTML = generateAnalysisHTML();
+    updateChartInterpretations();
 
     updateHistoryTable();
 
@@ -335,11 +336,6 @@ function generateAnalysisHTML() {
     if (benchmarkHistory.length === 0) return "<p>No benchmark data available.</p>";
 
     let fastestRun = benchmarkHistory.reduce((prev, current) => (prev.avgTimeNs < current.avgTimeNs) ? prev : current);
-    let mostMemoryEfficientRun = benchmarkHistory.reduce((prev, current) => {
-        let prevAvgMem = prev.memDataMB.reduce((a, b) => a + b, 0) / prev.memDataMB.length;
-        let currAvgMem = current.memDataMB.reduce((a, b) => a + b, 0) / current.memDataMB.length;
-        return (prevAvgMem < currAvgMem) ? prev : current;
-    });
 
     let algorithmsRun = [...new Set(benchmarkHistory.map(run => run.algorithmName))];
     let algorithmsRunText = algorithmsRun.length === 1 ? algorithmsRun[0] : algorithmsRun.slice(0, -1).join(', ') + ' and ' + algorithmsRun[algorithmsRun.length - 1];
@@ -364,40 +360,6 @@ function generateAnalysisHTML() {
     }
     html += `</div>`;
 
-    // Execution Time Interpretation
-    html += `<div class="analysis-section mt-3">`;
-    html += `<h4><i class="fa-solid fa-clock"></i> Execution Time Progression Interpretation</h4>`;
-    html += `<p>Looking at the <strong>Execution Time Progression</strong> graph, `;
-    if (benchmarkHistory.length === 1) {
-        html += `the processing times across batches remain largely stable, indicating that ${benchmarkHistory[0].algorithmName} provides consistent lookup performance unaffected by minor data variances within batches.`;
-    } else {
-        html += `<strong>${fastestRun.algorithmName}</strong> generally maintains the lowest time band across all batches. If spikes are present, they are mitigated by effective bounds checking, unlike slower algorithms which may exhibit higher variance in edge cases.`;
-    }
-    html += `</p></div>`;
-
-    // Memory Usage Interpretation
-    html += `<div class="analysis-section mt-3">`;
-    html += `<h4><i class="fa-solid fa-memory"></i> Memory Usage Analysis Interpretation</h4>`;
-    let minAvgMem = (mostMemoryEfficientRun.memDataMB.reduce((a, b) => a + b, 0) / mostMemoryEfficientRun.memDataMB.length).toFixed(2);
-    html += `<p>The <strong>Memory Usage Analysis</strong> graph tracks dynamic overhead. `;
-    if (benchmarkHistory.length === 1) {
-        html += `Memory utilization sits steadily around <strong>${minAvgMem}MB</strong>, indicating robust garbage collection and minimal variable bloat during successive operations.`;
-    } else {
-        html += `<strong>${mostMemoryEfficientRun.algorithmName}</strong> (Run #${mostMemoryEfficientRun.run}) maintains the most efficient profile at roughly <strong>${minAvgMem}MB</strong>. Some algorithms might temporarily consume more memory due to larger sequence generation (like Fibonacci arrays) or wider exponential bound tracking.`;
-    }
-    html += `</p></div>`;
-
-    // Detailed Metrics Interpretation
-    html += `<div class="analysis-section mt-3">`;
-    html += `<h4><i class="fa-solid fa-layer-group"></i> Detailed Performance Metrics Interpretation</h4>`;
-    html += `<p>The <strong>Detailed Performance Metrics</strong> overlays both time (solid lines) and memory (dashed lines). `;
-    if (benchmarkHistory.length > 1 && fastestRun.run !== mostMemoryEfficientRun.run) {
-        html += `This visual intersection reveals an important trade-off: the algorithm achieving the fastest lookups (${fastestRun.algorithmName}) sometimes requires a slightly higher memory footprint compared to the most memory-efficient one (${mostMemoryEfficientRun.algorithmName}).`;
-    } else {
-        html += `The concurrent visualization validates that rapid index scaling does not trigger anomalous memory leakage, proving the architecture's stability under load.`;
-    }
-    html += `</p></div>`;
-
     // Conclusion Separated
     html += `<div class="analysis-section conclusion-box mt-4" style="padding: 15px; background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--primary-color); border-radius: 4px;">`;
     html += `<h4><i class="fa-solid fa-clipboard-check"></i> Conclusion</h4>`;
@@ -405,6 +367,62 @@ function generateAnalysisHTML() {
     html += `</p></div>`;
 
     return html;
+}
+
+function updateChartInterpretations() {
+    const timeInterpretationEl = document.getElementById('time-chart-interpretation');
+    const memoryInterpretationEl = document.getElementById('memory-chart-interpretation');
+    const detailedInterpretationEl = document.getElementById('detailed-chart-interpretation');
+
+    if (!timeInterpretationEl || !memoryInterpretationEl || !detailedInterpretationEl) return;
+
+    if (benchmarkHistory.length === 0) {
+        timeInterpretationEl.innerHTML = '';
+        memoryInterpretationEl.innerHTML = '';
+        detailedInterpretationEl.innerHTML = '';
+        return;
+    }
+
+    let fastestRun = benchmarkHistory.reduce((prev, current) => (prev.avgTimeNs < current.avgTimeNs) ? prev : current);
+    let mostMemoryEfficientRun = benchmarkHistory.reduce((prev, current) => {
+        let prevAvgMem = prev.memDataMB.reduce((a, b) => a + b, 0) / prev.memDataMB.length;
+        let currAvgMem = current.memDataMB.reduce((a, b) => a + b, 0) / current.memDataMB.length;
+        return (prevAvgMem < currAvgMem) ? prev : current;
+    });
+
+    // 1. Execution Time Progression Interpretation
+    let timeHtml = `<h4><i class="fa-solid fa-clock"></i> Execution Time Progression Interpretation</h4>`;
+    timeHtml += `<p>Looking at the <strong>Execution Time Progression</strong> graph, `;
+    if (benchmarkHistory.length === 1) {
+        timeHtml += `the processing times across batches remain largely stable, indicating that ${benchmarkHistory[0].algorithmName} provides consistent lookup performance unaffected by minor data variances within batches.`;
+    } else {
+        timeHtml += `<strong>${fastestRun.algorithmName}</strong> generally maintains the lowest time band across all batches. If spikes are present, they are mitigated by effective bounds checking, unlike slower algorithms which may exhibit higher variance in edge cases.`;
+    }
+    timeHtml += `</p>`;
+    timeInterpretationEl.innerHTML = timeHtml;
+
+    // 2. Memory Usage Analysis Interpretation
+    let memHtml = `<h4><i class="fa-solid fa-memory"></i> Memory Usage Analysis Interpretation</h4>`;
+    let minAvgMem = (mostMemoryEfficientRun.memDataMB.reduce((a, b) => a + b, 0) / mostMemoryEfficientRun.memDataMB.length).toFixed(2);
+    memHtml += `<p>The <strong>Memory Usage Analysis</strong> graph tracks dynamic overhead. `;
+    if (benchmarkHistory.length === 1) {
+        memHtml += `Memory utilization sits steadily around <strong>${minAvgMem}MB</strong>, indicating robust garbage collection and minimal variable bloat during successive operations.`;
+    } else {
+        memHtml += `<strong>${mostMemoryEfficientRun.algorithmName}</strong> (Run #${mostMemoryEfficientRun.run}) maintains the most efficient profile at roughly <strong>${minAvgMem}MB</strong>. Some algorithms might temporarily consume more memory due to larger sequence generation (like Fibonacci/exponential bound arrays).`;
+    }
+    memHtml += `</p>`;
+    memoryInterpretationEl.innerHTML = memHtml;
+
+    // 3. Detailed Performance Metrics Interpretation
+    let detHtml = `<h4><i class="fa-solid fa-layer-group"></i> Detailed Performance Metrics Interpretation</h4>`;
+    detHtml += `<p>The <strong>Detailed Performance Metrics</strong> overlays both time (solid lines) and memory (dashed lines). `;
+    if (benchmarkHistory.length > 1 && fastestRun.run !== mostMemoryEfficientRun.run) {
+        detHtml += `This visual intersection reveals an important trade-off: the algorithm achieving the fastest lookups (${fastestRun.algorithmName}) sometimes requires a slightly higher memory footprint compared to the most memory-efficient one (${mostMemoryEfficientRun.algorithmName}).`;
+    } else {
+        detHtml += `The concurrent visualization validates that rapid index scaling does not trigger anomalous memory leakage, proving the architecture's stability under load.`;
+    }
+    detHtml += `</p>`;
+    detailedInterpretationEl.innerHTML = detHtml;
 }
 
 function updateHistoryTable() {
