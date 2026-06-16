@@ -117,6 +117,21 @@ function handleFileUpload(file) {
         // Update max values for inputs based on dataset size
         document.getElementById('search-ops').value = Math.min(1000, datasetSize);
 
+        // Pre-populate search term with the first record's name or SKU
+        if (datasetPreview && datasetPreview.length > 0) {
+            let nameIndex = datasetHeaders.findIndex(h => h.toLowerCase() === 'name');
+            let skuIndex = datasetHeaders.findIndex(h => h.toLowerCase() === 'sku');
+            let defaultSearch = "";
+            if (nameIndex !== -1 && datasetPreview[0][nameIndex]) {
+                defaultSearch = datasetPreview[0][nameIndex];
+            } else if (skuIndex !== -1 && datasetPreview[0][skuIndex]) {
+                defaultSearch = datasetPreview[0][skuIndex];
+            } else if (datasetPreview[0][0]) {
+                defaultSearch = datasetPreview[0][0];
+            }
+            document.getElementById('search-term').value = defaultSearch;
+        }
+
         goToStep(2);
     };
 
@@ -155,6 +170,11 @@ function generateData(records) {
 
         // Update max values for inputs based on dataset size
         document.getElementById('search-ops').value = Math.min(1000, records);
+
+        // Pre-populate search term for generated data
+        if (datasetPreview && datasetPreview.length > 0) {
+            document.getElementById('search-term').value = "Product 1";
+        }
 
         goToStep(2);
     }, 600);
@@ -199,6 +219,13 @@ function startBenchmark() {
 }
 
 function executeBenchmarkCore() {
+    // Get search term
+    const searchTerm = (document.getElementById('search-term').value || '').trim();
+    if (!searchTerm) {
+        alert("Please enter a search term to run the benchmark.");
+        return;
+    }
+
     // 1. Prepare dataset by sorting via SKU
     let skuIndex = datasetHeaders.findIndex(h => h.toLowerCase() === 'sku');
     if (skuIndex === -1) skuIndex = 0;
@@ -215,17 +242,30 @@ function executeBenchmarkCore() {
 
     const searchOps = parseInt(document.getElementById('search-ops').value) || 0;
 
-    // 2. Prepare exact queried keys
+    // Filter optimizedDataset to find records containing the search term in any of their fields
+    let matchingRecords = optimizedDataset.filter(record => {
+        return record.original.some(cell => {
+            if (cell === undefined || cell === null) return false;
+            return cell.toString().toLowerCase().includes(searchTerm.toLowerCase());
+        });
+    });
+
+    if (matchingRecords.length === 0) {
+        alert("No records match your search query '" + searchTerm + "'. Please enter a search query that matches records in your dataset (e.g. check the dataset preview).");
+        return;
+    }
+
+    // 2. Prepare exact queried keys based on matching records
     let queries = [];
-    if (optimizedDataset.length > 0) {
+    if (matchingRecords.length > 0) {
         for (let i = 0; i < searchOps; i++) {
-            let randIdx = Math.floor(Math.random() * optimizedDataset.length);
-            queries.push(optimizedDataset[randIdx].key);
+            let randIdx = Math.floor(Math.random() * matchingRecords.length);
+            queries.push(matchingRecords[randIdx].key);
         }
     }
 
     // 3. Batch mapping for time profiling
-    const numBatches = 6;
+    const numBatches = 30;
     let batches = [];
     let queriesPerBatch = Math.max(1, Math.floor(searchOps / numBatches));
 
@@ -242,6 +282,8 @@ function executeBenchmarkCore() {
     ];
 
     document.getElementById('result-impl-used').innerText = "All Interpolation Variants";
+    document.getElementById('result-searched-term').innerText = searchTerm;
+    document.getElementById('result-matching-count').innerText = `(${matchingRecords.length.toLocaleString()} match${matchingRecords.length === 1 ? '' : 'es'} found)`;
 
     // 4. Run benchmarking for all algorithms!
     let kpiTotalNs = 0;
@@ -300,13 +342,15 @@ function executeBenchmarkCore() {
             algorithm: alg.id,
             algorithmName: alg.name,
             searchOps: searchOps,
+            searchTerm: searchTerm,
+            matchingCount: matchingRecords.length,
             totalTimeNs: totalTimeNs,
             avgTimeNs: avgTimeNs,
             fastestTimeNs: minBatchNs,
             timeDataMs: timeDataMs,
             timeDataNs: [...timeDataNs],
             memDataMB: [...memData],
-            batchLabels: ['Batch 1', 'Batch 2', 'Batch 3', 'Batch 4', 'Batch 5', 'Batch 6']
+            batchLabels: Array.from({ length: numBatches }, (_, i) => `Batch ${i + 1}`)
         });
     });
 
@@ -347,9 +391,9 @@ function generateAnalysisHTML() {
     html += `<h4><i class="fa-solid fa-ranking-star"></i> Performance Overview</h4>`;
     html += `<p>A total of ${benchmarkHistory.length} benchmark runs have been executed, covering ${algorithmsRunText}. `;
     if (benchmarkHistory.length === 1) {
-        html += `The algorithm averaged ${Math.round(benchmarkHistory[0].avgTimeNs).toLocaleString()}ns per operation.</p>`;
+        html += `For the search query <strong>"${benchmarkHistory[0].searchTerm}"</strong> (which matched ${benchmarkHistory[0].matchingCount} record(s)), the algorithm averaged ${Math.round(benchmarkHistory[0].avgTimeNs).toLocaleString()}ns per operation.</p>`;
     } else {
-        html += `Comparing the results, <strong>${fastestRun.algorithmName}</strong> (Run #${fastestRun.run}) proved to be the fastest, averaging ${Math.round(fastestRun.avgTimeNs).toLocaleString()}ns per operation. `;
+        html += `For the search query <strong>"${fastestRun.searchTerm}"</strong> (which matched ${fastestRun.matchingCount} record(s)), comparing the results shows that <strong>${fastestRun.algorithmName}</strong> (Run #${fastestRun.run}) proved to be the fastest, averaging ${Math.round(fastestRun.avgTimeNs).toLocaleString()}ns per operation. `;
 
         let slowestRun = benchmarkHistory.reduce((prev, current) => (prev.avgTimeNs > current.avgTimeNs) ? prev : current);
         if (fastestRun.run !== slowestRun.run) {
@@ -363,7 +407,7 @@ function generateAnalysisHTML() {
     // Conclusion Separated
     html += `<div class="analysis-section conclusion-box mt-4" style="padding: 15px; background: rgba(59, 130, 246, 0.1); border-left: 4px solid var(--primary-color); border-radius: 4px;">`;
     html += `<h4><i class="fa-solid fa-clipboard-check"></i> Conclusion</h4>`;
-    html += `<p style="margin-bottom: 0;"><strong>${fastestRun.algorithmName}</strong> is overall the most optimal choice for this dataset. It delivers the highest raw execution speed while providing a highly favorable trade-off between low look-up latency and manageable memory consumption.`;
+    html += `<p style="margin-bottom: 0;"><strong>${fastestRun.algorithmName}</strong> is overall the most optimal choice for finding records matching <strong>"${fastestRun.searchTerm}"</strong> in this dataset. It delivers the highest raw execution speed while providing a highly favorable trade-off between low look-up latency and manageable memory consumption.`;
     html += `</p></div>`;
 
     return html;
@@ -392,7 +436,7 @@ function updateChartInterpretations() {
 
     // 1. Execution Time Progression Interpretation
     let timeHtml = `<h4><i class="fa-solid fa-clock"></i> Execution Time Progression Interpretation</h4>`;
-    timeHtml += `<p>Looking at the <strong>Execution Time Progression</strong> graph, `;
+    timeHtml += `<p>Looking at the <strong>Execution Time Progression</strong> graph for query <strong>"${fastestRun.searchTerm}"</strong>, `;
     if (benchmarkHistory.length === 1) {
         timeHtml += `the processing times across batches remain largely stable, indicating that ${benchmarkHistory[0].algorithmName} provides consistent lookup performance unaffected by minor data variances within batches.`;
     } else {
@@ -404,7 +448,7 @@ function updateChartInterpretations() {
     // 2. Memory Usage Analysis Interpretation
     let memHtml = `<h4><i class="fa-solid fa-memory"></i> Memory Usage Analysis Interpretation</h4>`;
     let minAvgMem = (mostMemoryEfficientRun.memDataMB.reduce((a, b) => a + b, 0) / mostMemoryEfficientRun.memDataMB.length).toFixed(2);
-    memHtml += `<p>The <strong>Memory Usage Analysis</strong> graph tracks dynamic overhead. `;
+    memHtml += `<p>The <strong>Memory Usage Analysis</strong> graph tracks dynamic overhead while searching for <strong>"${mostMemoryEfficientRun.searchTerm}"</strong>. `;
     if (benchmarkHistory.length === 1) {
         memHtml += `Memory utilization sits steadily around <strong>${minAvgMem}MB</strong>, indicating robust garbage collection and minimal variable bloat during successive operations.`;
     } else {
@@ -415,7 +459,7 @@ function updateChartInterpretations() {
 
     // 3. Detailed Performance Metrics Interpretation
     let detHtml = `<h4><i class="fa-solid fa-layer-group"></i> Detailed Performance Metrics Interpretation</h4>`;
-    detHtml += `<p>The <strong>Detailed Performance Metrics</strong> overlays both time (solid lines) and memory (dashed lines). `;
+    detHtml += `<p>The <strong>Detailed Performance Metrics</strong> overlays both time (solid lines) and memory (dashed lines) for query <strong>"${fastestRun.searchTerm}"</strong>. `;
     if (benchmarkHistory.length > 1 && fastestRun.run !== mostMemoryEfficientRun.run) {
         detHtml += `This visual intersection reveals an important trade-off: the algorithm achieving the fastest lookups (${fastestRun.algorithmName}) sometimes requires a slightly higher memory footprint compared to the most memory-efficient one (${mostMemoryEfficientRun.algorithmName}).`;
     } else {
@@ -444,6 +488,7 @@ function updateHistoryTable() {
         tr.innerHTML = `
             <td>#${runData.run}</td>
             <td>${runData.algorithmName}</td>
+            <td>${runData.searchTerm || 'N/A'}</td>
             <td>${nForm.format(runData.searchOps)}</td>
             <td>${dForm.format(runData.totalTimeNs)}</td>
             <td>${dForm.format(runData.avgTimeNs)}</td>
@@ -537,7 +582,8 @@ function renderCharts() {
     if (memoryChart) memoryChart.destroy();
     if (detailedChart) detailedChart.destroy();
 
-    const batchLabels = ['Batch 1', 'Batch 2', 'Batch 3', 'Batch 4', 'Batch 5', 'Batch 6'];
+    const numBatches = benchmarkHistory.length > 0 ? benchmarkHistory[0].batchLabels.length : 30;
+    const batchLabels = Array.from({ length: numBatches }, (_, i) => `Batch ${i + 1}`);
     const colors = [
         '#3b82f6', // blue
         '#10b981', // green
@@ -552,13 +598,14 @@ function renderCharts() {
     const historyToUse = benchmarkHistory.length > 0 ? benchmarkHistory : [{
         run: 1,
         algorithmName: 'No Data Yet',
-        timeDataNs: lastTimeData.length > 0 ? lastTimeData : [800000, 810000, 790000, 805000, 795000, 800000],
-        memDataMB: lastMemData.length > 0 ? lastMemData : [0.2, 0.21, 0.2, 0.19, 0.22, 0.2]
+        searchTerm: 'None',
+        timeDataNs: lastTimeData.length > 0 ? lastTimeData : Array.from({ length: 30 }, () => 800000 + Math.random() * 20000 - 10000),
+        memDataMB: lastMemData.length > 0 ? lastMemData : Array.from({ length: 30 }, () => 0.2 + Math.random() * 0.04 - 0.02)
     }];
 
     // 1. Time Chart Datasets
     const timeDatasets = historyToUse.map((run, idx) => ({
-        label: `Run ${run.run}: ${run.algorithmName}`,
+        label: `Run ${run.run}: ${run.algorithmName} (Search: "${run.searchTerm || 'Random'}")`,
         data: run.timeDataNs,
         borderColor: colors[idx % colors.length],
         backgroundColor: colors[idx % colors.length] + '20', // transparent fill
@@ -569,7 +616,7 @@ function renderCharts() {
 
     // 2. Memory Chart Datasets
     const memDatasets = historyToUse.map((run, idx) => ({
-        label: `Run ${run.run}: ${run.algorithmName}`,
+        label: `Run ${run.run}: ${run.algorithmName} (Search: "${run.searchTerm || 'Random'}")`,
         data: run.memDataMB,
         borderColor: colors[(idx + 1) % colors.length], // shift color
         backgroundColor: colors[(idx + 1) % colors.length] + '20',
@@ -582,7 +629,7 @@ function renderCharts() {
     const detailedDatasets = [];
     historyToUse.forEach((run, idx) => {
         detailedDatasets.push({
-            label: `R${run.run} Time (ns)`,
+            label: `R${run.run} Time (Search: "${run.searchTerm || 'Random'}")`,
             data: run.timeDataNs,
             borderColor: colors[idx % colors.length],
             backgroundColor: colors[idx % colors.length],
@@ -592,7 +639,7 @@ function renderCharts() {
             pointRadius: 4
         });
         detailedDatasets.push({
-            label: `R${run.run} Mem (MB)`,
+            label: `R${run.run} Mem (Search: "${run.searchTerm || 'Random'}")`,
             data: run.memDataMB,
             borderColor: colors[idx % colors.length] + '80', // slightly faded for memory
             borderDash: [5, 5],
@@ -792,12 +839,21 @@ function downloadCSV() {
     }
 
     let csvContent = "data:text/csv;charset=utf-8,";
+    
+    // Find the maximum number of batches in history to create headers dynamically
+    const maxBatches = benchmarkHistory.reduce((max, run) => Math.max(max, run.timeDataNs.length), 0);
+    
     // Header
     const headers = [
-        "Run Number", "Algorithm", "Total Operations", "Total Time (ns)", "Avg Time (ns)", "Fastest Time (ns)",
-        "Batch 1 Time (ns)", "Batch 2 Time (ns)", "Batch 3 Time (ns)", "Batch 4 Time (ns)", "Batch 5 Time (ns)", "Batch 6 Time (ns)",
-        "Batch 1 Mem (MB)", "Batch 2 Mem (MB)", "Batch 3 Mem (MB)", "Batch 4 Mem (MB)", "Batch 5 Mem (MB)", "Batch 6 Mem (MB)"
+        "Run Number", "Algorithm", "Total Operations", "Total Time (ns)", "Avg Time (ns)", "Fastest Time (ns)"
     ];
+    for (let i = 1; i <= maxBatches; i++) {
+        headers.push(`Batch ${i} Time (ns)`);
+    }
+    for (let i = 1; i <= maxBatches; i++) {
+        headers.push(`Batch ${i} Mem (MB)`);
+    }
+    
     csvContent += headers.map(h => `"${h}"`).join(",") + "\r\n";
 
     benchmarkHistory.forEach(run => {

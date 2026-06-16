@@ -150,10 +150,15 @@
                     </div>
 
                     <div class="config-panel">
-
                         <div class="config-row">
-                            <div class="config-group full-width">
-                                <label><i class="fa-solid fa-magnifying-glass"></i> SKU Search</label>
+                            <div class="config-group" style="flex: 1;">
+                                <label><i class="fa-solid fa-magnifying-glass"></i> Dataset Search Query</label>
+                                <span class="input-label">Type characters to search in the dataset</span>
+                                <input type="text" id="search-term" class="form-input" placeholder="e.g. SKU-10005, Electronics, Product 1">
+                                <span class="input-help" id="search-term-help">Searches SKU, name, category, etc. (case-insensitive)</span>
+                            </div>
+                            <div class="config-group" style="flex: 1;">
+                                <label><i class="fa-solid fa-calculator"></i> Search Operations</label>
                                 <span class="input-label">Number of Search Operations</span>
                                 <input type="number" id="search-ops" class="form-input" value="1000">
                                 <span class="input-help" id="max-search-help">Max: 1,000,000</span>
@@ -198,9 +203,14 @@
                     </div>
                 </div>
 
-                <div class="impl-banner">
-                    <strong>Algorithms Benchmarked:</strong> <span id="result-impl-used">All Interpolation
-                        Variants</span>
+                <div class="impl-banner" style="display: flex; flex-direction: column; gap: 0.5rem; padding: 1.25rem;">
+                    <div>
+                        <strong>Algorithms Benchmarked:</strong> <span id="result-impl-used">All Interpolation Variants</span>
+                    </div>
+                    <div style="border-top: 1px solid rgba(0,0,0,0.05); padding-top: 0.5rem; margin-top: 0.25rem;">
+                        <strong>Searched Term:</strong> <span id="result-searched-term" class="badge" style="background-color: var(--blue-bg); color: var(--primary-color); font-size: 0.875rem; padding: 0.25rem 0.5rem; font-weight: 600; display: inline-block;">N/A</span>
+                        <span id="result-matching-count" class="text-gray" style="font-size: 0.85rem; margin-left: 0.5rem;">(0 matches found)</span>
+                    </div>
                 </div>
 
                 <!-- Analysis of Benchmark Section added based on prompt request -->
@@ -223,6 +233,7 @@
                                     <tr>
                                         <th>Run #</th>
                                         <th>Algorithm</th>
+                                        <th>Search Query</th>
                                         <th>Ops</th>
                                         <th>Total Time (ns)</th>
                                         <th>Avg Time (ns)</th>
