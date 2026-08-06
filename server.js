@@ -21,6 +21,13 @@ const server = http.createServer((req, res) => {
     // Normalize URL
     let urlPath = req.url.split('?')[0];
 
+    // Handle favicon to avoid console 404 errors
+    if (urlPath === '/favicon.ico') {
+        res.writeHead(204);
+        res.end();
+        return;
+    }
+
     // Root route maps to index.html in the root folder
     if (urlPath === '/' || urlPath === '/index.html') {
         const filePath = path.join(__dirname, 'index.html');
@@ -76,3 +83,9 @@ const server = http.createServer((req, res) => {
 });
 
 module.exports = server;
+
+if (require.main === module) {
+    server.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+    });
+}

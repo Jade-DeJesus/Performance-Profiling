@@ -215,8 +215,12 @@ function renderDatasetPage() {
 
         // Update Pagination Controls
         if (pageIndicator) pageIndicator.innerText = `Page ${currentPreviewPage.toLocaleString()} of ${totalPages.toLocaleString()}`;
-        if (btnPrev) btnPrev.disabled = currentPreviewPage === 1;
-        if (btnNext) btnNext.disabled = currentPreviewPage === totalPages;
+        const pageSlider = document.getElementById('dataset-page-slider');
+        if (pageSlider) {
+            pageSlider.max = totalPages;
+            pageSlider.value = currentPreviewPage;
+            pageSlider.disabled = totalPages <= 1;
+        }
 
         // Populate Headers
         if (datasetHeaders && datasetHeaders.length > 0) {
@@ -252,3 +256,53 @@ function closeDatasetModal() {
     const modal = document.getElementById('dataset-modal');
     if (modal) modal.style.display = 'none';
 }
+
+// Swipe Gesture Pagination Support
+let touchStartX = 0;
+let touchEndX = 0;
+const SWIPE_THRESHOLD = 50;
+
+function handleDatasetSwipe() {
+    const sourceData = currentPreviewSource === 'found' ? matchedPreview : datasetPreview;
+    if (!sourceData) return;
+    const totalRows = sourceData.length;
+    const totalPages = Math.ceil(totalRows / previewRowsPerPage);
+
+    if (touchEndX < touchStartX - SWIPE_THRESHOLD) {
+        // Swiped left -> Next page
+        if (currentPreviewPage < totalPages) {
+            changeDatasetPage(1);
+        }
+    }
+    if (touchEndX > touchStartX + SWIPE_THRESHOLD) {
+        // Swiped right -> Previous page
+        if (currentPreviewPage > 1) {
+            changeDatasetPage(-1);
+        }
+    }
+}
+
+function initDatasetSwipeEvents() {
+    const tableDiv = document.querySelector('#dataset-modal .table-responsive');
+    if (!tableDiv) return;
+
+    tableDiv.addEventListener('touchstart', e => {
+        touchStartX = e.changedTouches[0].screenX;
+    }, { passive: true });
+
+    tableDiv.addEventListener('touchend', e => {
+        touchEndX = e.changedTouches[0].screenX;
+        handleDatasetSwipe();
+    }, { passive: true });
+}
+
+function onPageSliderInput(value) {
+    currentPreviewPage = parseInt(value, 10);
+    renderDatasetPage();
+    const tableDiv = document.querySelector('#dataset-modal .table-responsive');
+    if (tableDiv) tableDiv.scrollTop = 0;
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initDatasetSwipeEvents();
+});

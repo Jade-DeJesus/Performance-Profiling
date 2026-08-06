@@ -306,14 +306,16 @@
             </div>
 
             <div id="dataset-pagination"
-                style="display: none; justify-content: space-between; align-items: center; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
-                <button class="btn btn-outline" id="btn-prev-page" onclick="changeDatasetPage(-1)">
-                    <i class="fa-solid fa-chevron-left"></i> Previous
-                </button>
-                <span id="page-indicator" style="font-size: 0.875rem; color: #666;">Page 1 of ?</span>
-                <button class="btn btn-outline" id="btn-next-page" onclick="changeDatasetPage(1)">
-                    Next <i class="fa-solid fa-chevron-right"></i>
-                </button>
+                style="display: none; flex-direction: column; gap: 10px; margin-top: 15px; padding-top: 15px; border-top: 1px solid #eee;">
+                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                    <span id="page-indicator" style="font-size: 0.875rem; color: #666; font-weight: 500;">Page 1 of ?</span>
+                    <span class="slide-tip" style="font-size: 0.75rem; color: var(--text-muted);"><i class="fa-solid fa-hand-pointer"></i> Slide or Swipe table to change pages</span>
+                </div>
+                <div style="display: flex; align-items: center; width: 100%;">
+                    <i class="fa-solid fa-angle-left" style="color: var(--text-muted); font-size: 1rem; width: 15px; text-align: center;"></i>
+                    <input type="range" id="dataset-page-slider" min="1" max="1" value="1" oninput="onPageSliderInput(this.value)" style="flex: 1; margin: 0 12px; accent-color: var(--primary-color); cursor: pointer;">
+                    <i class="fa-solid fa-angle-right" style="color: var(--text-muted); font-size: 1rem; width: 15px; text-align: center;"></i>
+                </div>
             </div>
 
             <div id="dataset-modal-empty" style="display: none; padding: 20px; text-align: center; color: #666;">

@@ -97,7 +97,6 @@ function renderCharts() {
     });
 
     // 3. Detailed Combined Chart (Violin with Dual Y-Axes)
-    detCtx.canvas.parentNode.style.height = '350px';
     detailedChart = new Chart(detCtx, {
         type: 'violin',
         data: {
